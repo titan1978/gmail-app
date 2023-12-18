@@ -1,0 +1,54 @@
+// Simple Message with BODY NO HTML. Still getting the text/html
+parts: [
+    {
+      partId: '0',
+      mimeType: 'text/plain',
+      filename: '',
+      headers: [Array],
+      body: [Object]
+    },
+    {
+      partId: '1',
+      mimeType: 'text/html',
+      filename: '',
+      headers: [Array],
+      body: [Object]
+    }
+  ]
+
+// Message with BODY and complex HTML embedded. the HTML is NOT an attachment. Getting the expected text/html
+  parts: [
+    {
+      partId: '0',
+      mimeType: 'text/plain',
+      filename: '',
+      headers: [Array],
+      body: [Object]
+    },
+    {
+      partId: '1',
+      mimeType: 'text/html',
+      filename: '',
+      headers: [Array],
+      body: [Object]
+    }
+  ]
+
+// Message with BODY and PDF ATTACHMENT embedded.
+  parts: [
+    {
+      partId: '0',
+      mimeType: 'multipart/alternative',
+      filename: '',
+      headers: [Array],
+      body: [Object],
+      parts: [Array]
+    },
+    {
+      partId: '1',
+      mimeType: 'application/pdf',
+      filename: '25008700785-Copy_of_Contract.pdf',
+      headers: [Array],
+      body: [Object]
+    }
+  ]
