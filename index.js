@@ -1,5 +1,6 @@
 const fs = require('fs').promises;
 const path = require('path');
+const Base64 = require('js-base64')
 const process = require('process');
 const {authenticate} = require('@google-cloud/local-auth');
 const {google} = require('googleapis');
@@ -124,6 +125,21 @@ async function markAsRead(messages, auth) {
     }
   });
 }
+
+async function getAttachment(messageId, attachmentId, auth) {
+  const response = await google.gmail('v1').users.messages.attachments.get({
+      auth: auth,
+      userId: 'me',
+      messageId: messageId,
+      id: attachmentId
+  });
+  return response.data;
+}
+
+function decodeBase64(str) {
+  str = str.replace(/_/g, '/').replace(/-/g, '+') // important line
+  return Base64.atob(str)
+}
   
 /**
  * Print each message. Currently sending only 1 message within messages.
@@ -137,18 +153,29 @@ async function handleMessages(messages, auth) {
     auth: auth,
     userId: 'me',
     id:messages[0].id
-  }, function(err, response) {
-      console.log("$$$$$ RESPONSE ",response);
-      console.log("$$$$$$ RESPONSE SNIPPET ",response.data.snippet);
-      console.log("$$$$$$$ RESPONSE PAYLOAD ",response.data.payload);
-      if (response.data.payload.body.size === 0) { // Complex email w/ attachments or embedded HTML
-        response.data.payload.parts.forEach(part => {
-          console.log("$$$$$$$$ COMPLEX RESPONSE PAYLOAD BODY PARTID", part.partId)
-          console.log("$$$$$$$$ COMPLEX RESPONSE PAYLOAD BODY CONTENT", (part.mimeType === 'text/plain' ? Buffer.from(part.body.data, 'base64').toString('utf8') : part.body.data))
+  }, function(err, message) {
+      console.log("$$$$$ MESSAGE ",message);
+      console.log("$$$$$$ MESSAGE SNIPPET ",message.data.snippet);
+      console.log("$$$$$$$ MESSAGE PAYLOAD ",message.data.payload);
+      if (message.data.payload.body.size === 0) { // Complex email w/ attachments or embedded HTML
+        message.data.payload.parts.forEach(part => {
+          console.log("$$$$$$$$ COMPLEX MESSAGE PART PAYLOAD BODY PARTID", part.partId)
+          console.log("$$$$$$$$ COMPLEX MESSAGE PART PAYLOAD BODY", part.body)
+          console.log("$$$$$$$$ COMPLEX MESSAGE PART PAYLOAD BODY CONTENT", (part.mimeType === 'text/plain' ? Buffer.from(part.body.data, 'base64').toString('utf8') : part.body.data))
+          console.log("$$$$$$$$ COMPLEX MESSAGE PART PAYLOAD ATTACHMENT FILENAME", (part.filename ? part.filename : "No file attachment present"))
+          if (part.filename) {
+            const messageId = message.data.id
+            const attachmentId = part.body.attachmentId;
+            console.log("$$$$$$$$ COMPLEX MESSAGE PART PAYLOAD ATTACHMENT ID for MESSAGE ID", attachmentId, messageId);
+            getAttachment(messageId, attachmentId, auth).then(attachmentBufferData => 
+              {
+                console.log("$$$$$$$$ COMPLEX MESSAGE PART PAYLOAD ATTACHMENT RAW", decodeBase64(attachmentBufferData.data))
+                fs.writeFile(part.filename, decodeBase64(attachmentBufferData.data));
+              })
+          }
         })
       } else { // Simple email w/ NO attachments or embedded HTML
         console.log("$$$$$$$$ SIMPLE RESPONSE PAYLOAD BODY DATA",Buffer.from(response.data.payload.body.data, 'base64').toString("utf8"));
-
       }
   });
 }
@@ -160,7 +187,7 @@ async function handleUnreadMessage() {
   const auth = await authorize();
   const messages = await findUnreadMessages(auth);
   await handleMessages(messages, auth);
-  await markAsRead(messages, auth);
+  //await markAsRead(messages, auth);
 }
 
 handleUnreadMessage();
