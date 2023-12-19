@@ -5,7 +5,7 @@ const {authenticate} = require('@google-cloud/local-auth');
 const {google} = require('googleapis');
 
 // If modifying these scopes, delete token.json.
-const SCOPES = ['https://www.googleapis.com/auth/gmail.readonly'];
+const SCOPES = ['https://www.googleapis.com/auth/gmail.readonly','https://www.googleapis.com/auth/gmail.modify'];
 // The file token.json stores the user's access and refresh tokens, and is
 // created automatically when the authorization flow completes for the first
 // time.
@@ -97,21 +97,43 @@ async function findMessages(auth) {
     maxResults: 1,
     q:""
   }, function(err, response) {
-      console.log(response);
-      console.log("++++++++++++++++++++++++++");
-      printMessage(response.data.messages, auth);
+    console.log("##### All Messsages Count",response.data.messages.length);
+    console.log("++++++++++++++++++++++++++");
+    //printMessages(response.data.messages, auth);
     });
   }
+
+async function findUnreadMessages(auth)  {
+    const response = await google.gmail('v1').users.messages.list({
+      auth: auth,
+      userId: 'me',
+      maxResults: 1,
+      q:"is:unread"
+    });
+
+    return response.data.messages;
+}
+
+async function markAsRead(messages, auth) {
+  google.gmail('v1').users.messages.modify({
+    auth: auth,
+    userId: 'me', 
+    id: messages[0].id,
+    resource: {
+      removeLabelIds: ['UNREAD']
+    }
+  });
+}
   
 /**
- * Print each message
+ * Print each message. Currently sending only 1 message within messages.
+ * TBD: Expand for bulk
+ * 
  * @param {} messages
  * @param {} auth 
  */
-async function printMessage(messages, auth) {
-    console.log("$$$$ MESSAGES ", messages);
-    var gmail = google.gmail('v1');
-    gmail.users.messages.get({
+async function handleMessages(messages, auth) {
+    google.gmail('v1').users.messages.get({
     auth: auth,
     userId: 'me',
     id:messages[0].id
@@ -119,20 +141,26 @@ async function printMessage(messages, auth) {
       console.log("$$$$$ RESPONSE ",response);
       console.log("$$$$$$ RESPONSE SNIPPET ",response.data.snippet);
       console.log("$$$$$$$ RESPONSE PAYLOAD ",response.data.payload);
-      if (response.data.payload.body.size === 0) {
-        response.data.payload.parts.forEach(e => {
-          console.log("$$$$$$$$ RESPONSE PAYLOAD BODY PARTID", e.partId)
-          console.log("$$$$$$$$ RESPONSE PAYLOAD BODY CONTENT", e.body)
+      if (response.data.payload.body.size === 0) { // Complex email w/ attachments or embedded HTML
+        response.data.payload.parts.forEach(part => {
+          console.log("$$$$$$$$ COMPLEX RESPONSE PAYLOAD BODY PARTID", part.partId)
+          console.log("$$$$$$$$ COMPLEX RESPONSE PAYLOAD BODY CONTENT", (part.mimeType === 'text/plain' ? Buffer.from(part.body.data, 'base64').toString('utf8') : part.body.data))
         })
-      
-      } else {
-        console.log("$$$$$$$$ RESPONSE PAYLOAD BODY DATA",response.data.payload.body.data.toString("utf8"));
-        console.log("$$$$$$$$ RESPONSE PAYLOAD BODY DATA",Buffer.from(response.data.payload.body.data, 'base64').toString("utf8"));
+      } else { // Simple email w/ NO attachments or embedded HTML
+        console.log("$$$$$$$$ SIMPLE RESPONSE PAYLOAD BODY DATA",Buffer.from(response.data.payload.body.data, 'base64').toString("utf8"));
 
       }
   });
 }
 
 //authorize().then(listLabels).catch(console.error);
-authorize().then(findMessages).catch(console.error)
+//authorize().then(findMessages).catch(console.error)
 
+async function handleUnreadMessage() {
+  const auth = await authorize();
+  const messages = await findUnreadMessages(auth);
+  await handleMessages(messages, auth);
+  await markAsRead(messages, auth);
+}
+
+handleUnreadMessage();
