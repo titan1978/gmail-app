@@ -187,7 +187,7 @@ async function handleUnreadMessage() {
   const auth = await authorize();
   const messages = await findUnreadMessages(auth);
   await handleMessages(messages, auth);
-  //await markAsRead(messages, auth);
+  await markAsRead(messages, auth);
 }
 
 handleUnreadMessage();
