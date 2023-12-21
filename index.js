@@ -138,7 +138,7 @@ async function getAttachment(messageId, attachmentId, auth) {
 
 function decodeBase64(str) {
   str = str.replace(/_/g, '/').replace(/-/g, '+') // important line
-  return Base64.atob(str)
+  return Buffer.from(str, "base64")
 }
   
 /**
@@ -157,7 +157,7 @@ async function handleMessages(messages, auth) {
       console.log("$$$$$ MESSAGE ",message);
       console.log("$$$$$$ MESSAGE SNIPPET ",message.data.snippet);
       console.log("$$$$$$$ MESSAGE PAYLOAD ",message.data.payload);
-      if (message.data.payload.body.parts) { // Complex email w/ attachments or embedded HTML
+      if (message.data.payload.parts) { // Complex email w/ attachments or embedded HTML
         message.data.payload.parts.forEach(part => {
           console.log("######## COMPLEX MESSAGE PART PAYLOAD BODY PARTID", part.partId)
           console.log("######## COMPLEX MESSAGE PART PAYLOAD BODY", part.body)
@@ -187,7 +187,7 @@ async function handleUnreadMessage() {
   const auth = await authorize();
   const messages = await findUnreadMessages(auth);
   await handleMessages(messages, auth);
-  await markAsRead(messages, auth);
+  //await markAsRead(messages, auth);
 }
 
 handleUnreadMessage();
