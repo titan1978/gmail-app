@@ -157,25 +157,25 @@ async function handleMessages(messages, auth) {
       console.log("$$$$$ MESSAGE ",message);
       console.log("$$$$$$ MESSAGE SNIPPET ",message.data.snippet);
       console.log("$$$$$$$ MESSAGE PAYLOAD ",message.data.payload);
-      if (message.data.payload.body.size === 0) { // Complex email w/ attachments or embedded HTML
+      if (message.data.payload.body.parts) { // Complex email w/ attachments or embedded HTML
         message.data.payload.parts.forEach(part => {
-          console.log("$$$$$$$$ COMPLEX MESSAGE PART PAYLOAD BODY PARTID", part.partId)
-          console.log("$$$$$$$$ COMPLEX MESSAGE PART PAYLOAD BODY", part.body)
-          console.log("$$$$$$$$ COMPLEX MESSAGE PART PAYLOAD BODY CONTENT", (part.mimeType === 'text/plain' ? Buffer.from(part.body.data, 'base64').toString('utf8') : part.body.data))
-          console.log("$$$$$$$$ COMPLEX MESSAGE PART PAYLOAD ATTACHMENT FILENAME", (part.filename ? part.filename : "No file attachment present"))
+          console.log("######## COMPLEX MESSAGE PART PAYLOAD BODY PARTID", part.partId)
+          console.log("######## COMPLEX MESSAGE PART PAYLOAD BODY", part.body)
+          console.log("######## COMPLEX MESSAGE PART PAYLOAD BODY DATA", (part.mimeType === 'text/plain' ? Buffer.from(part.body.data, 'base64').toString('utf8') : part.body.data))
+          console.log("######## COMPLEX MESSAGE PART PAYLOAD ATTACHMENT FILENAME", (part.filename ? part.filename : "No file attachment present"))
           if (part.filename) {
             const messageId = message.data.id
             const attachmentId = part.body.attachmentId;
-            console.log("$$$$$$$$ COMPLEX MESSAGE PART PAYLOAD ATTACHMENT ID for MESSAGE ID", attachmentId, messageId);
+            console.log("######## COMPLEX MESSAGE PART PAYLOAD ATTACHMENT ID for MESSAGE ID", attachmentId, messageId);
             getAttachment(messageId, attachmentId, auth).then(attachmentBufferData => 
               {
-                console.log("$$$$$$$$ COMPLEX MESSAGE PART PAYLOAD ATTACHMENT RAW", decodeBase64(attachmentBufferData.data))
+                console.log("######## COMPLEX MESSAGE PART PAYLOAD ATTACHMENT RAW", decodeBase64(attachmentBufferData.data))
                 fs.writeFile(part.filename, decodeBase64(attachmentBufferData.data));
               })
           }
         })
       } else { // Simple email w/ NO attachments or embedded HTML
-        console.log("$$$$$$$$ SIMPLE RESPONSE PAYLOAD BODY DATA",Buffer.from(response.data.payload.body.data, 'base64').toString("utf8"));
+        console.log("******* SIMPLE RESPONSE PAYLOAD BODY DATA",Buffer.from(message.data.payload.body.data, 'base64').toString("utf8"));
       }
   });
 }
